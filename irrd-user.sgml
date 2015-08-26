@@ -477,6 +477,8 @@ Mirror host: 193.0.0.200:43
   Remote status query unsupported.
 </screen>
 <para>
+<command>show mirrors-status *</command> can be used for a quick overview of all configured databases.</para>
+<para>
 <command>show statusfile</command> -- shows location of the IRRD_STATUS file.</para>
 <para>
 IRRd version 2.0 makes it possible to store additional state information for remote repositories.  This data is used for responses to the show mirror-status command and other queries.  By default, the <filename>IRRD_STATUS</filename> file is stored in your IRRd configuration directory and is called <filename>IRRD_STATUS</filename>.  You can use the set statusfile command to set a different location. </para>

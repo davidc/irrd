@@ -398,7 +398,105 @@ void uii_mirrorstatus_db (uii_connection_t *uii, char *db_name) {
   int ret;
   enum { UNDETERMINED, READONLY, AUTHORITATIVE, MIRROR } status = UNDETERMINED;
 
-  if ((database = find_database (db_name)) != NULL) {
+  if (strcmp(db_name, "*") == 0) {
+
+    uii_add_bulk_output (uii, " %-12s   %-10s  %-10s   %-10s  %-10s   %s\r\n",
+			 "", "Local", "", "Remote", "", "");
+    uii_add_bulk_output (uii, " %-12s   %-10s  %-10s   %-10s  %-10s   %s\r\n",
+			 "Database", "Old.Jrnl", "Current", "Old.Jrnl", "Current", "Status");
+    uii_add_bulk_output (uii, " %-12s   %-10s  %-10s   %-10s  %-10s   %s\r\n",
+			 "--------", "--------", "--------", "--------", "--------", "------");
+
+    LL_Iterate (IRR.ll_database_alphabetized, database) {
+
+      uii_add_bulk_output (uii, " %-12s   ", database->name);
+
+      if (database->mirror_prefix == NULL) {
+	if ((database->flags & IRR_AUTHORITATIVE) == IRR_AUTHORITATIVE) {
+	  status = AUTHORITATIVE;
+	}
+	else {
+	  status = READONLY;
+	}
+      }
+      else {
+	status = MIRROR;
+      }
+
+      if (find_oldest_serial(database->name, JOURNAL_OLD, &oldest_journal) != 1)
+	if (find_oldest_serial(database->name, JOURNAL_NEW, &oldest_journal) != 1)
+	  oldest_journal = 0;
+
+      if (oldest_journal) {
+	uii_add_bulk_output (uii, "%-10d  ", oldest_journal);
+      }
+      else {
+	uii_add_bulk_output (uii, "%-10s  ", "-");
+      }
+
+      uii_add_bulk_output (uii, "%-10d   ", database->serial_number);
+
+      switch (status) {
+      case AUTHORITATIVE:
+	uii_add_bulk_output (uii, "Authoritative");
+	break;
+
+      case READONLY:
+	uii_add_bulk_output (uii, "Read only");
+	break;
+
+      case MIRROR:
+	ret = get_remote_mirrorstatus(database->mirror_prefix, database->mirror_port);
+	if (ret != 1) {
+	  uii_add_bulk_output (uii, "*WARNING* Error getting status, see logfile.");
+	}
+	else {
+	  switch (database->remote_mirrorstatus) {
+	  case MIRRORSTATUS_UNDETERMINED:
+	    uii_add_bulk_output (uii, "*WARNING* Status undetermined, see logfile.");
+	    break;
+	  case MIRRORSTATUS_FAILED:
+	    uii_add_bulk_output (uii, "*WARNING* Failed to connect to remote database, see logfile.");
+	    break;
+	  case MIRRORSTATUS_UNSUPPORTED:
+	    uii_add_bulk_output (uii, "Remote status query unsupported.");
+	    break;
+	  case MIRRORSTATUS_UNAVAILABLE:
+	    uii_add_bulk_output (uii, "Remote status information unavailable.");
+	    break;
+	  case MIRRORSTATUS_YES:
+	    uii_add_bulk_output (uii, "%-10d  ", database->remote_oldestjournal);
+	    uii_add_bulk_output (uii, "%-10d   ", database->remote_currentserial);
+
+	    if (database->serial_number < database->remote_oldestjournal) {
+	      uii_add_bulk_output (uii, "*WARNING* Remote oldest journal > our CURRENTSERIAL.");
+	    }
+	    else if (database->serial_number > database->remote_currentserial) {
+	      uii_add_bulk_output (uii, "*WARNING* Remote CURRENTSERIAL < our CURRENTSERIAL.");
+	    }
+	    else {
+	      uii_add_bulk_output (uii, "OK");
+	    }
+	    break;
+	  case MIRRORSTATUS_NO:
+	    uii_add_bulk_output (uii, "%-10d  ", database->remote_oldestjournal);
+	    uii_add_bulk_output (uii, "%-10d   ", database->remote_currentserial);
+
+	    uii_add_bulk_output (uii, "*WARNING* Not mirrorable.");
+	    break;
+	  default:
+	    uii_add_bulk_output (uii, "*WARNING* Invalid value in databases remote_mirrorstatus field");
+	    break;
+	  }
+	}
+      }
+
+      uii_add_bulk_output (uii, "\r\n");
+
+      uii_send_bulk_data (uii);
+    }
+  }
+  else if ((database = find_database (db_name)) != NULL) {
     uii_add_bulk_output (uii, "%s (", db_name);
     if (database->mirror_prefix == NULL) {
       if ((database->flags & IRR_AUTHORITATIVE) == IRR_AUTHORITATIVE) {
