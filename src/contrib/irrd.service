@@ -1,0 +1,20 @@
+# systemd service file for irrd.
+# Copy this to /etc/systemd/system/ and then run:
+# - systemctl daemon-reload
+# - systemctl enable irrd
+
+[Unit]
+Description=Internet Routing Registry daemon
+Documentation=https://github.com/irrdnet/irrd
+After=network.target
+
+[Service]
+# Change to wherever your you installed irrd.
+# Change username and group if required.
+ExecStart=/usr/local/sbin/irrd -n -l irrd -g irrd
+
+# type is simple because of -n (do not fork) above.
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
