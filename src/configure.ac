@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([irrd], m4_esyscmd_s(echo $(git describe --abbrev=4 --dirty --always --tags )))
+AC_INIT([irrd], m4_esyscmd_s(echo $(git describe --abbrev=4 --dirty --always --tags | sed 's/^v//')))
 AM_INIT_AUTOMAKE([foreign])
 
 AC_PREREQ([2.59])
